@@ -19,3 +19,5 @@ jobs:
       maven-goals: 'verify'         # optional
     secrets:
       GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      
