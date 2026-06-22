@@ -155,67 +155,24 @@ jobs:
         run: |
           pip install requests
   
-      - name: Architecture Review
+      - name: AI Review
         env:
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           python common-ci/scripts/run_agent.py \
-            architecture \
             review-context.txt \
-            architecture-review.md
+            ai-review.md
   
-      - name: Code Review
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      - name: Publish AI Review
         run: |
-          python common-ci/scripts/run_agent.py \
-            code \
-            review-context.txt \
-            code-review.md
+          echo "# AI Review Report" >> $GITHUB_STEP_SUMMARY
+          cat ai-review.md >> $GITHUB_STEP_SUMMARY
   
-      - name: Security Review
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          python common-ci/scripts/run_agent.py \
-            security \
-            review-context.txt \
-            security-review.md
-  
-      - name: Test Quality Review
-        env:
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        run: |
-          python common-ci/scripts/run_agent.py \
-            testing \
-            review-context.txt \
-            test-quality-review.md
-  
-      - name: Publish Review Summary
-        run: |
-          echo "# AI Review Summary" >> $GITHUB_STEP_SUMMARY
-  
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat architecture-review.md >> $GITHUB_STEP_SUMMARY
-  
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat code-review.md >> $GITHUB_STEP_SUMMARY
-  
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat security-review.md >> $GITHUB_STEP_SUMMARY
-  
-          echo "" >> $GITHUB_STEP_SUMMARY
-          cat test-quality-review.md >> $GITHUB_STEP_SUMMARY
-  
-      - name: Upload Reports
+      - name: Upload AI Review Report
         uses: actions/upload-artifact@v4
         with:
-          name: ai-review-reports
-          path: |
-            architecture-review.md
-            code-review.md
-            security-review.md
-            test-quality-review.md
+          name: ai-review-report
+          path: ai-review.md
 
   docker:
     runs-on: ubuntu-latest
