@@ -86,41 +86,43 @@ jobs:
   collect-review-context:
     runs-on: ubuntu-latest
     needs: test
+  
     if: github.event_name == 'pull_request'
-
+  
     steps:
+  
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Collect Diff
+  
+      - name: Generate Diff
         run: |
-          git fetch origin ${{ github.base_ref }}
-          git diff origin/${{ github.base_ref }} > diff.txt
-
-      - name: Collect Project Structure
+          git diff origin/${{ github.base_ref }}...HEAD > diff.txt
+  
+      - name: Generate Structure
         run: |
-          find src/main/java -type f > project-structure.txt || true
-          find src/test -type f > test-structure.txt || true
-
-      - name: Collect Build Context
+          find . -type f \
+          | grep -v ".git" \
+          > project-structure.txt
+  
+      - name: Create Review Context
         run: |
-          find . -name pom.xml > build-context.txt
-          find . -name Dockerfile >> build-context.txt
-
+          cat diff.txt > review-context.txt
+  
+          echo "" >> review-context.txt
+          echo "===== PROJECT STRUCTURE =====" >> review-context.txt
+          echo "" >> review-context.txt
+  
+          cat project-structure.txt >> review-context.txt
+  
       - uses: actions/upload-artifact@v4
         with:
           name: ai-review-context
-          path: |
-            diff.txt
-            project-structure.txt
-            test-structure.txt
-            build-context.txt
+          path: review-context.txt
 
   ai-review:
-    name: AI Review
     runs-on: ubuntu-latest
-
+  
     needs:
       - collect-review-context
   
@@ -128,128 +130,90 @@ jobs:
   
     steps:
   
-      - name: Checkout Application Repository
+      - name: Checkout Application Repo
         uses: actions/checkout@v4
   
-      - name: Download Review Context
+      - name: Download Context
         uses: actions/download-artifact@v4
         with:
           name: ai-review-context
   
-      - name: Checkout Common CI Repository
+      - name: Checkout Common CI
         uses: actions/checkout@v4
         with:
           repository: Asikahamed/common-ci
           path: common-ci
   
-      - name: Debug Workspace
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+  
+      - name: Install Dependencies
         run: |
-          echo "Current Directory:"
-          pwd
+          pip install requests
   
-          echo ""
-          echo "Workspace Structure:"
-          find . -maxdepth 3 -type d
-  
-      - name: Verify Agent Files
+      - name: Architecture Review
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          ls -R common-ci/agents
-          ls -R common-ci/skills
+          python common-ci/scripts/run_agent.py \
+            architecture \
+            review-context.txt \
+            architecture-review.md
   
-      - name: Load Architecture Agent
+      - name: Code Review
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          echo "Loading Architecture Agent..."
-          cat common-ci/agents/architecture-review-agent.md
-          echo ""
-          cat common-ci/skills/spring-boot-architecture-skill.md
+          python common-ci/scripts/run_agent.py \
+            code \
+            review-context.txt \
+            code-review.md
   
-      - name: Load Code Review Agent
+      - name: Security Review
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          echo "Loading Code Review Agent..."
-          cat common-ci/agents/code-review-agent.md
-          echo ""
-          cat common-ci/skills/java-code-review-skill.md
+          python common-ci/scripts/run_agent.py \
+            security \
+            review-context.txt \
+            security-review.md
   
-      - name: Load Security Agent
+      - name: Test Quality Review
+        env:
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
-          echo "Loading Security Agent..."
-          cat common-ci/agents/security-review-agent.md
-          echo ""
-          cat common-ci/skills/java-security-skill.md
+          python common-ci/scripts/run_agent.py \
+            testing \
+            review-context.txt \
+            test-quality-review.md
   
-      - name: Load Test Quality Agent
+      - name: Publish Review Summary
         run: |
-          echo "Loading Test Quality Agent..."
-          cat common-ci/agents/test-quality-agent.md
-          echo ""
-          cat common-ci/skills/java-testing-skill.md
+          echo "# AI Review Summary" >> $GITHUB_STEP_SUMMARY
   
-      - name: Generate Architecture Report
-        run: |
-          cat > architecture-review.md <<EOF
-          # Architecture Review
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat architecture-review.md >> $GITHUB_STEP_SUMMARY
   
-          Architecture agent loaded successfully.
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat code-review.md >> $GITHUB_STEP_SUMMARY
   
-          Waiting for Copilot integration.
-          EOF
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat security-review.md >> $GITHUB_STEP_SUMMARY
   
-      - name: Generate Code Review Report
-        run: |
-          cat > code-review.md <<EOF
-          # Code Review
+          echo "" >> $GITHUB_STEP_SUMMARY
+          cat test-quality-review.md >> $GITHUB_STEP_SUMMARY
   
-          Code review agent loaded successfully.
-  
-          Waiting for Copilot integration.
-          EOF
-  
-      - name: Generate Security Review Report
-        run: |
-          cat > security-review.md <<EOF
-          # Security Review
-  
-          Security review agent loaded successfully.
-  
-          Waiting for Copilot integration.
-          EOF
-  
-      - name: Generate Test Quality Report
-        run: |
-          cat > test-quality-review.md <<EOF
-          # Test Quality Review
-  
-          Test quality agent loaded successfully.
-  
-          Waiting for Copilot integration.
-          EOF
-  
-      - name: Upload AI Review Reports
+      - name: Upload Reports
         uses: actions/upload-artifact@v4
         with:
           name: ai-review-reports
-          retention-days: 7
           path: |
             architecture-review.md
             code-review.md
             security-review.md
             test-quality-review.md
-  
-      - name: Publish Reviews
-        run: |
-          echo "# AI Review Summary" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-  
-          cat architecture-review.md >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-  
-          cat code-review.md >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-  
-          cat security-review.md >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-  
-          cat test-quality-review.md >> $GITHUB_STEP_SUMMARY
 
   docker:
     runs-on: ubuntu-latest
