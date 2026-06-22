@@ -21,6 +21,8 @@ on:
         required: false
       REGISTRY_PASSWORD:
         required: false
+      OPENROUTER_API_KEY:
+        required: false
 
 permissions:
   contents: read
