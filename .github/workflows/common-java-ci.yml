@@ -124,6 +124,10 @@ jobs:
 
   ai-review:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
   
     needs:
       - collect-review-context
