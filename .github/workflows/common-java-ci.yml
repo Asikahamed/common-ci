@@ -109,6 +109,10 @@ jobs:
             target/surefire-reports/**
             build/test-results/**
             build/reports/**
+  review:
+    needs: test
+    if: github.event_name == 'pull_request'
+    uses: Asikahamed/common-ci/.github/workflows/architecture-review.yml@main
 
   docker:
     runs-on: ubuntu-latest
