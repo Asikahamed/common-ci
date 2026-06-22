@@ -5,7 +5,7 @@ import requests
 
 OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
 
-MODEL = "qwen/qwen3-coder:free"
+MODEL = "deepseek/deepseek-chat-v3-0324:free"
 
 AGENT_MAP = {
     "architecture": (
