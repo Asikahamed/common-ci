@@ -134,6 +134,12 @@ jobs:
         with:
           name: ai-review-context
 
+      - name: Checkout Common CI Repository
+        uses: actions/checkout@v4
+        with:
+          repository: Asikahamed/common-ci
+          path: common-ci
+
       - name: Verify Agent Files
         run: |
           ls -R agents
