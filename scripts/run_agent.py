@@ -71,6 +71,9 @@ response = requests.post(
     timeout=120
 )
 
+print("Status:", response.status_code)
+print("Response:", response.text)
+
 response.raise_for_status()
 
 result = response.json()
