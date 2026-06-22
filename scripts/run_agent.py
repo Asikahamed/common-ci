@@ -5,7 +5,12 @@ import requests
 
 OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
 
-MODEL = "deepseek/deepseek-chat-v3-0324:free"
+MODELS = [
+    "qwen/qwen3-coder:free",
+    "openai/gpt-oss-120b:free",
+    "poolside/laguna-xs.2:free"
+]
+
 
 AGENT_MAP = {
     "architecture": (
