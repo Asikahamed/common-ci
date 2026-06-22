@@ -118,58 +118,137 @@ jobs:
             build-context.txt
 
   ai-review:
+    name: AI Review
     runs-on: ubuntu-latest
 
     needs:
       - collect-review-context
-
+  
     if: github.event_name == 'pull_request'
-
+  
     steps:
-      - name: Checkout
+  
+      - name: Checkout Application Repository
         uses: actions/checkout@v4
-
+  
       - name: Download Review Context
         uses: actions/download-artifact@v4
         with:
           name: ai-review-context
-
+  
       - name: Checkout Common CI Repository
         uses: actions/checkout@v4
         with:
           repository: Asikahamed/common-ci
           path: common-ci
-
+  
+      - name: Debug Workspace
+        run: |
+          echo "Current Directory:"
+          pwd
+  
+          echo ""
+          echo "Workspace Structure:"
+          find . -maxdepth 3 -type d
+  
       - name: Verify Agent Files
         run: |
-          ls -R agents
-          ls -R skills
-
-      - name: Architecture Agent
+          ls -R common-ci/agents
+          ls -R common-ci/skills
+  
+      - name: Load Architecture Agent
         run: |
-          echo "# Architecture Review" > architecture-review.md
-          echo "Architecture agent executed." >> architecture-review.md
-
-      - name: Code Review Agent
+          echo "Loading Architecture Agent..."
+          cat common-ci/agents/architecture-review-agent.md
+          echo ""
+          cat common-ci/skills/spring-boot-architecture-skill.md
+  
+      - name: Load Code Review Agent
         run: |
-          echo "# Code Review" > code-review.md
-          echo "Code review agent executed." >> code-review.md
-
-      - name: Security Agent
+          echo "Loading Code Review Agent..."
+          cat common-ci/agents/code-review-agent.md
+          echo ""
+          cat common-ci/skills/java-code-review-skill.md
+  
+      - name: Load Security Agent
         run: |
-          echo "# Security Review" > security-review.md
-          echo "Security review agent executed." >> security-review.md
-
-      - name: Test Quality Agent
+          echo "Loading Security Agent..."
+          cat common-ci/agents/security-review-agent.md
+          echo ""
+          cat common-ci/skills/java-security-skill.md
+  
+      - name: Load Test Quality Agent
         run: |
-          echo "# Test Quality Review" > test-quality-review.md
-          echo "Test quality agent executed." >> test-quality-review.md
-
+          echo "Loading Test Quality Agent..."
+          cat common-ci/agents/test-quality-agent.md
+          echo ""
+          cat common-ci/skills/java-testing-skill.md
+  
+      - name: Generate Architecture Report
+        run: |
+          cat > architecture-review.md <<EOF
+          # Architecture Review
+  
+          Architecture agent loaded successfully.
+  
+          Waiting for Copilot integration.
+          EOF
+  
+      - name: Generate Code Review Report
+        run: |
+          cat > code-review.md <<EOF
+          # Code Review
+  
+          Code review agent loaded successfully.
+  
+          Waiting for Copilot integration.
+          EOF
+  
+      - name: Generate Security Review Report
+        run: |
+          cat > security-review.md <<EOF
+          # Security Review
+  
+          Security review agent loaded successfully.
+  
+          Waiting for Copilot integration.
+          EOF
+  
+      - name: Generate Test Quality Report
+        run: |
+          cat > test-quality-review.md <<EOF
+          # Test Quality Review
+  
+          Test quality agent loaded successfully.
+  
+          Waiting for Copilot integration.
+          EOF
+  
+      - name: Upload AI Review Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-review-reports
+          retention-days: 7
+          path: |
+            architecture-review.md
+            code-review.md
+            security-review.md
+            test-quality-review.md
+  
       - name: Publish Reviews
         run: |
+          echo "# AI Review Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+  
           cat architecture-review.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+  
           cat code-review.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+  
           cat security-review.md >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+  
           cat test-quality-review.md >> $GITHUB_STEP_SUMMARY
 
   docker:
