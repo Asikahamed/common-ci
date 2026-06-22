@@ -141,11 +141,17 @@ jobs:
             -t ${{ inputs.image-name }}:${{ github.sha }} \
             -t ${{ inputs.image-name }}:latest .
 
-      - name: Push Docker Image
-        if: inputs.push-image == true
-        run: |
-          docker push ${{ inputs.image-name }}:${{ github.sha }}
-          docker push ${{ inputs.image-name }}:latest
+      - name: Build and Push Docker Image
+        if: >
+          github.event_name == 'pull_request' &&
+          github.base_ref == 'main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ inputs.image-name }}:pr-${{ github.event.number }}
+            ${{ inputs.image-name }}:${{ github.sha }}
 
   publish-artifacts:
     runs-on: ubuntu-latest
