@@ -1,28 +1,28 @@
-name: Architecture Review Agent
+# name: Architecture Review Agent
 
-on:
-  workflow_call:
+# on:
+#   workflow_call:
 
-jobs:
-  architecture-review:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+# jobs:
+#   architecture-review:
+#     if: github.event_name == 'pull_request'
+#     runs-on: ubuntu-latest
 
-    permissions:
-      contents: read
+#     permissions:
+#       contents: read
 
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+#     steps:
+#       - uses: actions/checkout@v4
+#         with:
+#           fetch-depth: 0
 
-      - name: Get PR Diff
-        run: |
-          git fetch origin ${{ github.base_ref }}
-          git diff origin/${{ github.base_ref }} > diff.txt
+#       - name: Get PR Diff
+#         run: |
+#           git fetch origin ${{ github.base_ref }}
+#           git diff origin/${{ github.base_ref }} > diff.txt
 
-      - name: Upload Diff
-        uses: actions/upload-artifact@v4
-        with:
-          name: architecture-review-input
-          path: diff.txt
+#       - name: Upload Diff
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: architecture-review-input
+#           path: diff.txt
