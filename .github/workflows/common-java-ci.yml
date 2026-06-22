@@ -167,7 +167,14 @@ jobs:
         run: |
           echo "# AI Review Report" >> $GITHUB_STEP_SUMMARY
           cat ai-review.md >> $GITHUB_STEP_SUMMARY
-  
+
+      - name: Publish Review To PR
+        if: github.event_name == 'pull_request'
+        uses: marocchino/sticky-pull-request-comment@v2
+        with:
+          header: ai-review
+          path: ai-review.md
+
       - name: Upload AI Review Report
         uses: actions/upload-artifact@v4
         with:
