@@ -122,32 +122,43 @@ jobs:
     needs: test
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Login DockerHub
-        if: >
+      - name: Download Build Output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Login to Docker Hub
+        if: |
           inputs.push-image == true &&
-          github.event_name == 'pull_request' &&
-          github.base_ref == 'main'
+          (
+            github.event_name == 'pull_request' ||
+            github.ref == 'refs/heads/main'
+          )
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.REGISTRY_USERNAME }}
           password: ${{ secrets.REGISTRY_PASSWORD }}
 
-      - name: Build Image
+      - name: Build Docker Image
         run: |
           docker build \
             -t ${{ inputs.image-name }}:${{ github.sha }} \
             -t ${{ inputs.image-name }}:latest .
 
-      - name: Push Image
+      - name: Build and Push Docker Image
         if: >
-          inputs.push-image == true &&
           github.event_name == 'pull_request' &&
           github.base_ref == 'main'
-        run: |
-          docker push ${{ inputs.image-name }}:${{ github.sha }}
-          docker push ${{ inputs.image-name }}:latest
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ inputs.image-name }}:pr-${{ github.event.number }}
+            ${{ inputs.image-name }}:${{ github.sha }}
 
   publish-artifacts:
     runs-on: ubuntu-latest
