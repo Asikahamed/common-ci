@@ -1,0 +1,167 @@
+name: Common Java CI
+
+on:
+  workflow_call:
+    inputs:
+      java-version:
+        description: Java version
+        required: false
+        default: "21"
+        type: string
+
+      build-tool:
+        description: maven or gradle
+        required: false
+        default: "maven"
+        type: string
+
+      image-name:
+        description: Full image name
+        required: true
+        type: string
+
+      push-image:
+        description: Push image to registry
+        required: false
+        default: true
+        type: boolean
+
+    secrets:
+      REGISTRY_USERNAME:
+        required: false
+
+      REGISTRY_PASSWORD:
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build-package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Build & Package (Maven)
+        if: inputs.build-tool == 'maven'
+        run: |
+          mvn -B clean package -DskipTests
+
+      - name: Build & Package (Gradle)
+        if: inputs.build-tool == 'gradle'
+        run: |
+          ./gradlew clean assemble -x test --no-daemon
+
+      - name: Upload Build Output
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          retention-days: 7
+          path: |
+            target/**/*.jar
+            build/libs/*.jar
+
+  test:
+    runs-on: ubuntu-latest
+    needs: build-package
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ inputs.java-version }}
+          cache: maven
+
+      - name: Run Tests (Maven)
+        if: inputs.build-tool == 'maven'
+        run: |
+          mvn -B test
+
+      - name: Run Tests (Gradle)
+        if: inputs.build-tool == 'gradle'
+        run: |
+          ./gradlew test --no-daemon
+
+      - name: Upload Test Reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          retention-days: 7
+          path: |
+            target/surefire-reports/**
+            build/test-results/**
+            build/reports/**
+
+  docker:
+    runs-on: ubuntu-latest
+    needs: test
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Build Output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Login Registry
+        if: inputs.push-image == true
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t ${{ inputs.image-name }}:${{ github.sha }} \
+            -t ${{ inputs.image-name }}:latest .
+
+      - name: Push Docker Image
+        if: inputs.push-image == true
+        run: |
+          docker push ${{ inputs.image-name }}:${{ github.sha }}
+          docker push ${{ inputs.image-name }}:latest
+
+  publish-artifacts:
+    runs-on: ubuntu-latest
+    needs:
+      - build-package
+      - test
+
+    steps:
+      - name: Download Build Output
+        uses: actions/download-artifact@v4
+        with:
+          name: build-output
+
+      - name: Download Test Reports
+        uses: actions/download-artifact@v4
+        with:
+          name: test-reports
+
+      - name: Upload Final Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-build-artifacts
+          retention-days: 14
+          path: .
