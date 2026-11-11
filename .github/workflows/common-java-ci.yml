@@ -51,7 +51,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      security-events: write
+      security-events: write # Required to upload SARIF results to GitHub Security tab
+      actions: read
 
     steps:
       - name: Checkout Code
@@ -71,17 +72,32 @@ jobs:
         with:
           context: .
           push: false
-          load: true # Load into local daemon for scanning
+          load: true
           tags: ${{ secrets.dockerhub-username }}/${{ inputs.image-name }}:scan-test
 
-      - name: Run Trivy Vulnerability Scanner (Security Gate)
+      - name: Run Trivy Vulnerability Scanner
         uses: aquasecurity/trivy-action@master
         with:
           image-ref: '${{ secrets.dockerhub-username }}/${{ inputs.image-name }}:scan-test'
-          format: 'table'
-          exit-code: '1' # Fails the pipeline if CRITICAL or HIGH CVEs exist
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          exit-code: '1'
           severity: 'CRITICAL,HIGH'
 
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always() # Ensures upload runs even if vulnerabilities are found and the job fails
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+      - name: Upload Trivy Report as Artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: trivy-security-report
+          path: trivy-results.sarif
+          retention-days: 7
+          
   # ==========================================
   # JOB 3: Publish OCI Image to Docker Hub
   # ==========================================
